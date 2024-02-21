@@ -1,0 +1,195 @@
+
+import tkinter as tk
+import os
+from tkinter import filedialog as fd
+from tkinter.colorchooser import askcolor
+import time
+import datetime
+import webbrowser
+
+
+class Notepad(tk.Frame):
+    def __init__(self, parent, *args, **kwargs):
+        tk.Frame.__init__(self, parent, *args, **kwargs)
+        self.parent = parent
+
+        self.menu_bar = tk.Menu(self.parent)
+        self.file_submenu = tk.Menu(self.menu_bar, tearoff=0)
+        self.file_submenu.add_command(label="New")
+        self.file_submenu.add_command(label="Open", command=self.open)
+        self.file_submenu.add_command(label="Save", command=self.save)
+        self.file_submenu.add_command(label="Exit", command=self.quit)
+        self.menu_bar.add_cascade(label="File", menu=self.file_submenu)
+
+        self.edit = tk.Menu(self.menu_bar, tearoff=0)
+        self.edit.add_command(label="Clear All", command=self.clearall)
+        self.edit.add_command(label="Insert date", command=self.date)
+        self.edit.add_command(label="Insert hour", command=self.ora)
+        self.edit.add_command(label="Insert line", command=self.line)
+        self.menu_bar.add_cascade(label="Edit", menu=self.edit)
+
+        self.options = tk.Menu(self.menu_bar, tearoff=0)
+        self.options.add_command(label="Text normal", command=self.normal)
+        self.options.add_command(label="Text bold", command=self.bold)
+        self.options.add_command(label="Text underline", command=self.underline)
+        self.options.add_command(label="Text italic", command=self.italic)
+        self.menu_bar.add_cascade(label="Options", menu=self.options)
+
+
+        self.view = tk.Menu(self.menu_bar, tearoff=0)
+        self.view.add_command(label="Background", command=self.background)
+        self.view.add_command(label="Text")
+        self.menu_bar.add_cascade(label="View", menu=self.view)
+        # =============================================================
+        #    HELP MENU
+        # =============================================================
+        self.help = tk.Menu(self.menu_bar, tearoff=0)
+        self.help.add_command(label="View help")
+        self.help.add_command(label="Github push", command=self.push)
+        self.help.add_command(label="About", command=self.about)
+        self.menu_bar.add_cascade(label="Help", menu=self.help)
+
+        self.parent.config(menu=self.menu_bar)
+
+        self.text_area = tk.Text(self.parent, font="Lucida 14", undo=True)
+        self.create_text_area()
+
+
+        self.createPopup()
+        self.parent.bind("<Button-3>", self.doPopup)
+
+
+        self.toolbar = tk.Frame(self.parent, bd=1, relief=tk.RAISED)
+        self.ceas = tk.Label(self.toolbar, text="Ceas")
+        self.ceas.pack(side=tk.LEFT)
+        self.update()
+        self.toolbar.pack(side=tk.TOP, fill=tk.X)
+
+
+
+    def about(self):
+        ad = tk.Toplevel(self.parent)
+        txt = "Folks group\n"
+        la = tk.Label(ad, text=txt, foreground='blue')
+        la.pack()
+
+    def clear(self):
+        sel = self.text_area.get(tk.SEL_FIRST, tk.SEL_LAST)
+        self.text_area.delete(tk.SEL_FIRST, tk.SEL_LAST)
+
+
+    def paste(self):
+        try:
+            teext = self.text_area.selection_get(selection='CLIPBOARD')
+            self.text_area.insert(tk.INSERT, teext)
+        except:
+            showerror('ERROR', "Your can't paste something ")
+
+    def createPopup(self):
+        self.popup = tk.Menu(self.parent, tearoff=0, bd=5)
+        self.popup.add_command(label='Copy', command=self.copy)
+        self.popup.add_command(label="Paste", command=self.paste)
+        self.popup.add_command(label="Clear", command=self.clear)
+
+    def doPopup(self, event):
+        try:
+            self.popup.tk_popup(event.x_root, event.y_root)
+        finally:
+            self.popup.grab_release()
+
+
+    def copy(self):
+        self.text_area.clipboard_clear()
+        self.text_area.clipboard_append(self.text_area.selection_get())
+
+
+    def italic(self):
+        self.text_area.config(font=('Segio UI', 20, 'italic'))
+
+
+    def underline(self):
+        self.text_area.config(font=('Segio UI', 20, 'underline'))
+
+    def bold(self):
+        self.text_area.config(font=('Segio UI', 20, "bold"))
+
+
+    def normal(self):
+        self.text_area.config(font=("Segio UI", 20))
+
+
+    def ora(self):
+        ora = time.localtime()
+        self.text_area.insert(tk.INSERT, ora)
+
+    def line(self):
+        line = "-" * 60
+        self.text_area.insert(tk.INSERT, line)
+
+
+    def date(self):
+        data = datetime.date.today()
+        self.text_area.insert(tk.INSERT, data)
+
+    def clearall(self):
+        self.text_area.delete(1.0, tk.END)
+
+
+    def background(self):
+        (triple, color) = askcolor()
+        if color:
+            self.text_area.config(background=color)
+
+    def push(self):
+        os.system("./gitpush.sh")
+
+    def create_text_area(self):
+        # text area
+        self.text_area.pack(expand=True, fill="both")
+        # scroll bar
+        self.scroll_bar = tk.Scrollbar(self.text_area)
+        self.scroll_bar.pack(side=tk.RIGHT, fill=tk.Y)
+        self.scroll_bar.config(command=self.text_area.yview)
+
+        self.text_area.config(yscrollcommand=self.scroll_bar.set)
+
+    def open(self):
+        filetypes = (('text files', '*.txt'),
+                     ('All files', '*.*'))
+        filename = fd.askopenfile(filetypes=filetypes)
+        self.text_area.insert('1.0', filename.readlines())
+
+    def save(self):
+        f = fd.asksaveasfile(mode='w', defaultextension='.txt')
+        if f is None:
+            return
+        text2save = str(self.text_area.get(1.0, tk.END))
+        f.write(text2save)
+        f.close()
+
+    def update(self):
+        self.ceas.config(text=time.strftime("%I:%M:%S"))
+        self.ceas.after(1000, self.update)
+
+
+
+def main():
+        root = tk.Tk()
+        root.geometry("800x600")
+        root.title("Notepad - FOLKS group")
+        Notepad(root).pack(side="top", fill="both")
+        root.mainloop()
+
+
+if __name__ == '__main__':
+
+    main()
+    '''
+    root = tk.Tk()
+    root.geometry("800x600")
+    root.title("Notepad - FOLKS group")
+    Notepad(root).pack(side="top", fill="both")
+    root.mainloop()
+    '''
+# --------------------------------------------------------------END file
+
